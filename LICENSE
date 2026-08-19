@@ -1,0 +1,6 @@
+This repository contains packaging metadata authored for the Herdr Snap package.
+Unless otherwise stated, packaging metadata in this repository may be used under
+Apache License 2.0 terms.
+
+Herdr itself is an independent upstream project licensed under Apache-2.0.
+See https://github.com/herdrdev/herdr for upstream source and license terms.
