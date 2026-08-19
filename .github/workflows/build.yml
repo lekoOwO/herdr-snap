@@ -1,0 +1,49 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate packaging metadata
+        run: python3 scripts/validate.py
+
+  build:
+    name: build-${{ matrix.arch }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build snap
+        uses: snapcore/action-build@v1
+        id: build
+        with:
+          snapcraft-args: --platform ${{ matrix.arch }}
+
+      - name: Smoke test installed snap
+        if: matrix.arch == 'amd64'
+        run: |
+          sudo snap install --dangerous --classic "${{ steps.build.outputs.snap }}"
+          herdr --version
+          command -v herdr
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: herdr-snap-${{ matrix.arch }}
+          path: "${{ steps.build.outputs.snap }}"
+          if-no-files-found: error
