@@ -41,6 +41,78 @@ jobs:
           herdr --version
           command -v herdr
 
+      - name: Verify host user PATH tools from a managed pane
+        if: matrix.arch == 'amd64'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test_root="$(mktemp -d)"
+          trap 'kill "${server_pid:-}" 2>/dev/null || true; rm -rf "$test_root"' EXIT
+
+          # Simulate common user-level installations of Codex and Claude.
+          mkdir -p "$HOME/.local/bin"
+          cat > "$HOME/.local/bin/codex" <<'EOF'
+          #!/bin/sh
+          echo HERDR_CODEX_STUB_OK
+          EOF
+          cat > "$HOME/.local/bin/claude" <<'EOF'
+          #!/bin/sh
+          echo HERDR_CLAUDE_STUB_OK
+          EOF
+          chmod +x "$HOME/.local/bin/codex" "$HOME/.local/bin/claude"
+
+          # Confirm these are available to an ordinary host shell before entering Herdr.
+          export PATH="$HOME/.local/bin:$PATH"
+          test "$(command -v codex)" = "$HOME/.local/bin/codex"
+          test "$(command -v claude)" = "$HOME/.local/bin/claude"
+
+          export XDG_CONFIG_HOME="$test_root/config"
+          export XDG_RUNTIME_DIR="$test_root/runtime"
+          export HERDR_SOCKET_PATH="$test_root/runtime/herdr.sock"
+          export SHELL=/bin/bash
+          mkdir -p "$XDG_CONFIG_HOME/herdr" "$XDG_RUNTIME_DIR"
+          printf 'onboarding = false\n' > "$XDG_CONFIG_HOME/herdr/config.toml"
+
+          # Upstream's own headless-server tests launch `herdr server` under a PTY.
+          script -qefc 'herdr server' /dev/null >"$test_root/server.log" 2>&1 &
+          server_pid=$!
+
+          ready=0
+          for _ in $(seq 1 100); do
+            if herdr status server --json >"$test_root/status.json" 2>/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 0.1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo 'Herdr server did not become ready' >&2
+            cat "$test_root/server.log" >&2 || true
+            exit 1
+          fi
+
+          workspace_json="$(herdr workspace create --cwd "$GITHUB_WORKSPACE" --no-focus)"
+          printf '%s\n' "$workspace_json" > "$test_root/workspace.json"
+          pane_id="$(jq -r '.result.root_pane.pane_id // empty' "$test_root/workspace.json")"
+          if [ -z "$pane_id" ]; then
+            echo 'Could not obtain root pane ID' >&2
+            cat "$test_root/workspace.json" >&2
+            exit 1
+          fi
+
+          # Exercise command lookup inside an actual Herdr-managed PTY/shell.
+          herdr pane run "$pane_id" 'printf "HERDR_CHILD_PATH=%s\\n" "$PATH"; command -v codex; codex; command -v claude; claude'
+          herdr pane wait-output "$pane_id" --match HERDR_CODEX_STUB_OK --timeout 10000
+          herdr pane wait-output "$pane_id" --match HERDR_CLAUDE_STUB_OK --timeout 10000
+          herdr pane read "$pane_id" --source recent-unwrapped --lines 80 > "$test_root/pane.txt"
+          cat "$test_root/pane.txt"
+          grep -F "$HOME/.local/bin/codex" "$test_root/pane.txt"
+          grep -F "$HOME/.local/bin/claude" "$test_root/pane.txt"
+
+          herdr server stop || true
+          wait "$server_pid" || true
+
       - name: Upload snap artifact
         uses: actions/upload-artifact@v4
         with:
