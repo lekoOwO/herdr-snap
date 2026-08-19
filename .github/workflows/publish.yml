@@ -1,0 +1,45 @@
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Snap Store channel
+        required: true
+        default: edge
+        type: choice
+        options:
+          - edge
+          - beta
+          - candidate
+          - stable
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: publish-${{ matrix.arch }}
+    runs-on: ubuntu-24.04
+    environment: snap-store
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build snap
+        uses: snapcore/action-build@v1
+        id: build
+        with:
+          snapcraft-args: --platform ${{ matrix.arch }}
+
+      - name: Publish snap
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: ${{ inputs.channel }}
