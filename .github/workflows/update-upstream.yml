@@ -1,0 +1,28 @@
+name: check upstream release
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check packaged version
+        run: |
+          if scripts/check-upstream.py; then
+            echo "Packaging is current."
+          else
+            status=$?
+            if [ "$status" -eq 2 ]; then
+              echo "A newer stable Herdr release exists."
+              echo "Run scripts/update-upstream.py and review the resulting diff."
+              exit 1
+            fi
+            exit "$status"
+          fi
