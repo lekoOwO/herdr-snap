@@ -1,0 +1,64 @@
+name: herdr
+version: "0.8.0"
+summary: Terminal runtime for coding agents
+description: |
+  Herdr is a terminal-based runtime and workspace manager for coding agents.
+  This snap repackages the official upstream Linux release binaries.
+
+license: Apache-2.0
+website:
+  - https://herdr.dev
+source-code:
+  - https://github.com/herdrdev/herdr
+issues:
+  - https://github.com/herdrdev/herdr/issues
+
+base: core24
+grade: stable
+confinement: classic
+
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+  arm64:
+    build-on: [amd64, arm64]
+    build-for: [arm64]
+
+apps:
+  herdr:
+    command: bin/herdr
+
+parts:
+  herdr:
+    plugin: nil
+    build-packages:
+      - ca-certificates
+      - curl
+    override-build: |
+      set -eux
+
+      version="$(craftctl get version)"
+      sha256_amd64="b872ea7e40fa2cb17e857ac9b62b1bf26db7b403c622f5d2f3f5b35f6e9acd28"
+      sha256_arm64="f647ac66468d9efbc642fe534fb284468f0aea60641606fc008dfc0d82a3ca87"
+
+      case "${CRAFT_ARCH_BUILD_FOR}" in
+        amd64)
+          asset="herdr-linux-x86_64"
+          sha256="${sha256_amd64}"
+          ;;
+        arm64)
+          asset="herdr-linux-aarch64"
+          sha256="${sha256_arm64}"
+          ;;
+        *)
+          echo "Unsupported target architecture: ${CRAFT_ARCH_BUILD_FOR}" >&2
+          exit 1
+          ;;
+      esac
+
+      url="https://github.com/herdrdev/herdr/releases/download/v${version}/${asset}"
+      curl --fail --location --retry 3 --output "${asset}" "${url}"
+      printf '%s  %s\n' "${sha256}" "${asset}" | sha256sum --check --strict -
+
+      install -Dm755 "${asset}" "${CRAFT_PART_INSTALL}/bin/herdr"
