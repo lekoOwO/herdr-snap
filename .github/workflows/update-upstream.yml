@@ -15,13 +15,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check packaged version
         run: |
-          if scripts/check-upstream.py; then
+          if python3 scripts/check-upstream.py; then
             echo "Packaging is current."
           else
             status=$?
             if [ "$status" -eq 2 ]; then
               echo "A newer stable Herdr release exists."
-              echo "Run scripts/update-upstream.py and review the resulting diff."
+              echo "Run: python3 scripts/update-upstream.py"
               exit 1
             fi
             exit "$status"
