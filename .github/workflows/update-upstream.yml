@@ -20,9 +20,8 @@ jobs:
           else
             status=$?
             if [ "$status" -eq 2 ]; then
-              echo "A newer stable Herdr release exists."
-              echo "Run: python3 scripts/update-upstream.py"
-              exit 1
+              echo "::notice::A newer stable Herdr release exists. Run: python3 scripts/update-upstream.py"
+              exit 0
             fi
             exit "$status"
           fi
