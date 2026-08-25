@@ -1,9 +1,13 @@
 name: herdr
-version: "0.8.0"
-summary: Terminal runtime for coding agents
+title: Herdr (Unofficial Snap)
+version: "0.8.2"
+summary: Community Snap packaging for Herdr
 description: |
   Herdr is a terminal-based runtime and workspace manager for coding agents.
-  This snap repackages the official upstream Linux release binaries.
+
+  This is an unofficial community-maintained Snap package that repackages the
+  official upstream Linux release binaries from herdrdev/herdr. It is not
+  currently maintained or endorsed by the Herdr upstream project.
 
 license: Apache-2.0
 website:
@@ -11,7 +15,9 @@ website:
 source-code:
   - https://github.com/herdrdev/herdr
 issues:
-  - https://github.com/herdrdev/herdr/issues
+  - https://github.com/lekoOwO/herdr-snap/issues
+contact:
+  - https://github.com/lekoOwO/herdr-snap/issues
 
 base: core24
 grade: stable
@@ -39,8 +45,8 @@ parts:
       set -eux
 
       version="$(craftctl get version)"
-      sha256_amd64="b872ea7e40fa2cb17e857ac9b62b1bf26db7b403c622f5d2f3f5b35f6e9acd28"
-      sha256_arm64="f647ac66468d9efbc642fe534fb284468f0aea60641606fc008dfc0d82a3ca87"
+      sha256_amd64="976150a14d490c94b243ea2e1a7eb2dfb67f12e36b182db90936f6728e6aecf4"
+      sha256_arm64="f55610658e1c2e0d2aaef730b4b2ab885f7f8ba00285ab372bfb14f2e3d5b40d"
 
       case "${CRAFT_ARCH_BUILD_FOR}" in
         amd64)
